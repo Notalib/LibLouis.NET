@@ -25,7 +25,7 @@ public class SpacingTests
 
     private static readonly string[] Tables =
         new[] { "da-dk-braillo.dis", "da-dk-g26.ctb" }
-            .Select(t => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tables", t))
+            .Select(t => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "nota-tables", t))
             .ToArray();
 
     [Fact]
