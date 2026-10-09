@@ -23,7 +23,7 @@ public class NativeMethodsTests
         Array.Fill(modes, TypeForm.ForeignLanguage);
 
         string resultString = LibLouis.Instance.Translate(
-            tables.Select(t => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tables", t)),
+            tables.Select(t => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "nota-tables", t)),
             input,
             outputLength,
             modes,
@@ -47,7 +47,7 @@ public class NativeMethodsTests
         modes[6] = TypeForm.ForeignLanguage | TypeForm.Emphasis;
 
         string resultString = LibLouis.Instance.Translate(
-            tables.Select(t => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tables", t)),
+            tables.Select(t => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "nota-tables", t)),
             input,
             outputLength,
             modes,
@@ -87,7 +87,7 @@ public class NativeMethodsTests
         Assert.Equal(inputLength, modes.Length);
 
         string resultString = LibLouis.Instance.Translate(
-            tables.Select(t => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tables", t)),
+            tables.Select(t => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "nota-tables", t)),
             input,
             outputLength,
             modes,
@@ -102,7 +102,7 @@ public class NativeMethodsTests
         const string input = "Første linje. Anden linje, med kursiveret tekst. Tredje linje.";
         const string expected = "@fze linje. @anç linje, m kursi#rò ükz. @tàdje linje.";
 
-        string[] tables = ["tables/da-dk-braillo.dis", "tables/da-dk-g26.ctb"];
+        string[] tables = ["nota-tables/da-dk-braillo.dis", "nota-tables/da-dk-g26.ctb"];
 
         int outputLength = input.Length * 4;
         int cursorPosition = 0;
