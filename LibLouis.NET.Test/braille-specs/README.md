@@ -3,11 +3,12 @@
 Copied verbatim from `upstream/liblouis-<version>/tests/braille-specs/`. Re-copy when the upstream
 version is bumped; the diff is the set of expectations that changed.
 
-100 specs are here, from liblouis 3.38.0, covering roughly 60 languages. Upstream ships 157.
+100 specs are here, from liblouis 3.39.0, covering roughly 60 languages. Upstream ships 160.
 
 The selection below was made against 3.33.0. Specs upstream has added since have not been tried yet:
 `en-g3-dictionary.yaml`, `en-g3.yaml`, `en-gb-comp8.yaml`, `et_harness.yaml`, `it.yaml`,
-`ja-rokutenkanji.yaml`, `lt.yaml`, `mk.yaml`, `ovd.yaml` and `smi.yaml`.
+`ja-rokutenkanji.yaml`, `lt.yaml`, `mk.yaml`, `ovd.yaml` and `smi.yaml` (3.38.0), and `en-nz.yaml`,
+`ht.yaml` and `mi.yaml` (3.39.0).
 
 ## What is not here, and why
 
@@ -54,8 +55,9 @@ zh-tw.yaml  2/20
 ```
 
 **2 do not parse.** One has a multi-line double-quoted scalar YamlDotNet rejects. The other is
-`en-ueb.yaml`, which ran here until 3.38.0: that release continues a flow sequence on an unindented
-line (`- [` then `disingenuous, ...]`), which libyaml accepts and YamlDotNet 18.1.0 throws on.
+`en-ueb.yaml`, which ran here until 3.38.0: since that release it continues a flow sequence on an
+unindented line (`- [` then `disingenuous, ...]`), which libyaml accepts and YamlDotNet 18.1.0
+throws on.
 
 ## Restoring one
 
