@@ -100,9 +100,9 @@ public class BrailleSpecTests(ITestOutputHelper output)
         var expected = new SortedDictionary<string, int>(StringComparer.Ordinal)
         {
             ["test option: expected_typeform"] = 17,
-            ["test option: mode"] = 14,
+            ["test option: mode"] = 19,
             ["test option: outputPos"] = 5067,
-            ["test option: typeform"] = 287,
+            ["test option: typeform"] = 339,
             ["testmode: display"] = 5,
             ["testmode: hyphenate"] = 1198,
         };
@@ -198,9 +198,15 @@ public class BrailleSpecTests(ITestOutputHelper output)
     // the hundred-odd specs do not each re-run the same lou_findTable queries.
     private static readonly Lazy<Dictionary<string, string>> TableCache = new(() =>
     {
-        LibLouis.Instance.IndexTables(
-            Directory.EnumerateFiles(TableDirectory)
-                .Where(f => Path.GetExtension(f) is ".ctb" or ".utb" or ".uti" or ".dis" or ".cti" or ".dic"));
+        // Every file in the directory, not a list of extensions. liblouis itself indexes whatever
+        // LOUIS_TABLEPATH contains without looking at the name (metadata.c, indexTablePath ->
+        // listDir), and lou_indexTables already skips a file it finds no metadata in, so a filter
+        // here can only ever be wrong in one direction: it drops tables upstream would have
+        // indexed. That is what it did - the extension list predated the .tbl files, so all 55 of
+        // them were invisible, and .tbl is exactly where upstream now puts the metadata that
+        // lou_findTable matches on. Queries that should have selected one either found nothing or
+        // settled for a worse match from another language.
+        LibLouis.Instance.IndexTables(Directory.EnumerateFiles(TableDirectory));
 
         var resolved = new Dictionary<string, string>(StringComparer.Ordinal);
 
