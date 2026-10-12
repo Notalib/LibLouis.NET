@@ -3,7 +3,7 @@
 Copied verbatim from `upstream/liblouis-<version>/tests/braille-specs/`. Re-copy when the upstream
 version is bumped; the diff is the set of expectations that changed.
 
-125 specs are here, from liblouis 3.39.0, covering roughly 70 languages. Upstream ships 160.
+126 specs are here, from liblouis 3.39.0, covering roughly 70 languages. Upstream ships 160.
 
 The selection below was made against 3.33.0. Specs upstream has added since have not been tried yet:
 `en-g3-dictionary.yaml`, `en-g3.yaml`, `en-gb-comp8.yaml`, `et_harness.yaml`, `it.yaml`,
@@ -17,26 +17,18 @@ The selection below was made against 3.33.0. Specs upstream has added since have
 200,000+ cases each, around 800,000 in total. They would dominate every run for little extra signal.
 Add them behind a switch if wanted.
 
-### 14 specs that do not yet pass
+### 13 specs that do not yet pass
 
 Not excluded because they are wrong — excluded because nobody has worked out yet whether the
 disagreement is this harness or the wrapper, and a red suite that is expected to be red is worse
 than a smaller green one. They divide into three groups.
 
-**2 fail on a construct this harness reads differently from upstream.** Both resolve their tables
-correctly and disagree on a handful of cases each; in both the harness is the one that is wrong.
+**1 fails on a construct this harness reads differently from upstream.** It resolves its tables
+correctly and disagrees on a handful of cases; the harness is the one that is wrong.
 
 ```
-en-us-g2.yaml  6/20
 es-g0-g1.yaml  8/992
 ```
-
-`en-us-g2.yaml` has a `flags: {testmode: bothDirections}` block followed by three bare `tests:`
-blocks. This harness carries the flags forward; upstream does not. `lou_checkyaml.c` declares
-`int testmode = MODE_DEFAULT;` *inside* the loop over the `flags`/`tests` keys, so a `tests:` block
-with no `flags:` of its own runs forward. The six cases that fail here are ones the harness runs
-backward and upstream runs forward — back-translating five identical cells and expecting five
-different bullet characters cannot pass in any case.
 
 `es-g0-g1.yaml` uses `'\n'`, `'\r'` and `'\s'`. `BrailleSpec.Unescape` handles only `\xNNNN`,
 `\yNNNN`, `\uNNNN`, `\\` and `\"`, so those three reach liblouis as a literal backslash plus a
@@ -79,6 +71,22 @@ language: `language:ar grade:1` resolved to `he-IL.utb`, `language:en region:en-
 `en-ueb-g2.ctb`. liblouis applies no filter of its own — `indexTablePath` in metadata.c hands it
 every file on `LOUIS_TABLEPATH` and drops the ones with no metadata — so a filter here could only
 ever be wrong in one direction. 25 of the 27 passed as soon as it was removed.
+
+### What used to be here: en-us-g2.yaml and the scope of a flags block
+
+`flags:` used to persist until the next `flags:`, so a bare `tests:` block inherited it. Upstream
+spends it on the one block that follows: `lou_checkyaml.c` declares `int testmode = MODE_DEFAULT;`
+*inside* the loop over the `flags`/`tests` keys (around line 1138), and `MODE_DEFAULT` is
+`MODE_TRANSLATION_FORWARD`. `en-us-g2.yaml` follows a `bothDirections` block with a bare one, so six
+of its entries were also run backward — back-translating five identical cells and expecting five
+different bullet characters cannot pass in any case. It checks 14 cases now rather than 20, and the
+six that went was the whole of its failure.
+
+Only `en-us-g2.yaml` was affected. `vi.yaml` is the one other spec here with a bare `tests:` after a
+`flags:` block, and every one of its bare blocks follows `{testmode: forward}`, which is what they
+now default to anyway. No `{testmode: hyphenate}` or `{testmode: display}` block is followed by a
+bare `tests:`, so no entry that used to be skipped started running: the recorded tally moved only by
+the one `inputPos` entry `en-us-g2.yaml` brought with it.
 
 ## Restoring one
 

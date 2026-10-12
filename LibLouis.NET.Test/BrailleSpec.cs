@@ -76,7 +76,11 @@ public enum TestMode
 /// (tools/lou_checkyaml.c:1087-1139), so this reader does the same over YamlDotNet's IParser.
 ///
 /// Consecutive <c>table</c> keys accumulate rather than replace: the following <c>tests</c> block
-/// runs once per accumulated table. <c>flags</c> persists until the next <c>flags</c>.
+/// runs once per accumulated table. A <c>flags</c> block, by contrast, applies to the single
+/// <c>tests</c> block that follows it and no further: lou_checkyaml declares
+/// <c>int testmode = MODE_DEFAULT;</c> <em>inside</em> its loop over these keys
+/// (tools/lou_checkyaml.c:1138), so a <c>tests</c> block with no <c>flags</c> of its own runs
+/// forward rather than inheriting whatever came before it.
 ///
 /// Constructs fall into three groups. Those the harness drives are turned into cases. Those
 /// liblouis supports but the harness does not drive yet are counted in
@@ -101,7 +105,12 @@ public static class BrailleSpecReader
 
         string displayTable = string.Empty;
         var tables = new List<(string Query, string? AssertMatch)>();
-        TestMode mode = TestMode.Forward;
+
+        // The mode a tests block runs in when it carries no flags of its own: MODE_DEFAULT, which
+        // is MODE_TRANSLATION_FORWARD (tools/lou_checkyaml.c:56).
+        const TestMode defaultMode = TestMode.Forward;
+
+        TestMode mode = defaultMode;
         string? unsupportedMode = null;
 
         // Consecutive table keys accumulate, but the first one after a tests block starts a fresh
@@ -135,6 +144,12 @@ public static class BrailleSpecReader
                 case "tests":
                     ReadTests(parser, specFile, tables, displayTable, mode, unsupportedMode, cases, skipped);
                     tablesUsed = true;
+
+                    // A flags block is spent by the tests block it precedes. Carrying it further
+                    // would run a bare tests block in the wrong direction, which is not a
+                    // disagreement the spec can express: en-us-g2.yaml follows a bothDirections
+                    // block with a bare one whose cases only make sense forward.
+                    (mode, unsupportedMode) = (defaultMode, null);
                     break;
 
                 default:
