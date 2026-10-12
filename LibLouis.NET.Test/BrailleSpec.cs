@@ -424,10 +424,27 @@ public static class BrailleSpecReader
 
     /// <summary>
     /// The specs use single quoted scalars, where YAML performs no escape processing at all, and
-    /// rely on liblouis to interpret the escapes itself. Only the forms the specs use are handled:
-    /// \xNNNN and \uNNNN code points, and \\ for a literal backslash. Without the backslash case,
-    /// 'at\\bliver' parses as two backslashes and translates to two cells where one is expected.
+    /// rely on liblouis to interpret the escapes itself. This mirrors liblouis's own parser,
+    /// <c>parseCharsInternal</c> (liblouis/compileTranslationTable.c:1263), which lou_checkyaml
+    /// reaches through <c>_lou_extParseChars</c> for both the input and the expected value of every
+    /// case (tools/brl_checks.c:162 and :222). Without the <c>\\</c> case, 'at\\bliver' parses as
+    /// two backslashes and translates to two cells where one is expected.
     /// </summary>
+    /// <remarks>
+    /// Note what is deliberately absent. <c>\u</c> is not a liblouis escape at all: the specs write
+    /// it only in double quoted scalars, where YAML decodes it before the reader sees it, exactly as
+    /// libyaml does for upstream. <c>\"</c> is the same — a double quoted <c>"\""</c> arrives here as
+    /// a bare quote — and a <c>\"</c> that does survive YAML is QUOTESUB to liblouis, its stand-in
+    /// for a double quote inside a table string, not a quote.
+    ///
+    /// <c>\y</c> and <c>\z</c> take five and eight hex digits and need a UCS-4 build, which is what
+    /// build_runtime_packages.sh configures. A value above the BMP becomes a surrogate pair here,
+    /// which the marshaller turns back into the single widechar upstream gives liblouis.
+    ///
+    /// Upstream treats a malformed escape as a compile error and returns an empty string, which
+    /// would quietly reduce a case to a comparison of two empty strings. This throws instead, for
+    /// the same reason the reader throws on a construct nobody has looked at.
+    /// </remarks>
     private static string Unescape(string value)
     {
         if (!value.Contains('\\', StringComparison.Ordinal))
@@ -439,28 +456,112 @@ public static class BrailleSpecReader
 
         for (int i = 0; i < value.Length; i++)
         {
-            if (value[i] == '\\' && i + 1 < value.Length)
+            if (value[i] != '\\')
             {
-                if (value[i + 1] is 'x' or 'y' or 'u' && i + 5 < value.Length &&
-                    ushort.TryParse(
-                        value.AsSpan(i + 2, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort code))
-                {
-                    builder.Append((char)code);
-                    i += 5;
-                    continue;
-                }
-
-                if (value[i + 1] is '\\' or '"')
-                {
-                    builder.Append(value[i + 1]);
-                    i++;
-                    continue;
-                }
+                builder.Append(value[i]);
+                continue;
             }
 
-            builder.Append(value[i]);
+            if (i + 1 >= value.Length)
+            {
+                throw new NotSupportedException(
+                    $"'{value}' ends in a backslash, which is not a complete escape.");
+            }
+
+            // i is the escape letter from here on, so the digits of \x and friends start at i + 1.
+            char escape = value[++i];
+
+            int single = escape switch
+            {
+                '\\' => '\\',
+                'e' => 0x1b,
+                'f' => 12,
+                'n' => 10,
+                'r' => 13,
+                's' => ' ',
+                't' => 9,
+                'v' => 11,
+                'w' => 0xffff, // LOU_ENDSEGMENT
+                '"' => 28,     // QUOTESUB
+                _ => -1,
+            };
+
+            if (single >= 0)
+            {
+                builder.Append((char)single);
+                continue;
+            }
+
+            // The capitals are the deprecated spellings; liblouis warns but accepts them.
+            int digits = escape switch
+            {
+                'x' or 'X' => 4,
+                'y' or 'Y' => 5,
+                'z' or 'Z' => 8,
+                _ => 0,
+            };
+
+            if (digits == 0)
+            {
+                throw new NotSupportedException(
+                    $"unsupported escape '\\{escape}' in '{value}'. See parseCharsInternal in " +
+                    "liblouis/compileTranslationTable.c for the set liblouis accepts.");
+            }
+
+            if (i + digits >= value.Length || !TryParseHex(value.AsSpan(i + 1, digits), out uint code))
+            {
+                throw new NotSupportedException(
+                    $"'\\{escape}' in '{value}' needs {digits} hexadecimal digits.");
+            }
+
+            i += digits;
+
+            if (code <= 0xffff)
+            {
+                // A cast rather than ConvertFromUtf32, so an unpaired surrogate survives the way it
+                // does in a widechar.
+                builder.Append((char)code);
+            }
+            else if (code <= 0x10ffff)
+            {
+                builder.Append(char.ConvertFromUtf32((int)code));
+            }
+            else
+            {
+                throw new NotSupportedException(
+                    $"'\\{escape}' in '{value}' is U+{code:X}, which a .NET string cannot hold.");
+            }
         }
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// Exactly the digits <c>hexValue</c> accepts (compileTranslationTable.c:1233), rather than
+    /// <see cref="NumberStyles.HexNumber"/>, which would also allow surrounding white space.
+    /// </summary>
+    private static bool TryParseHex(ReadOnlySpan<char> digits, out uint value)
+    {
+        value = 0;
+
+        foreach (char digit in digits)
+        {
+            int parsed = digit switch
+            {
+                >= '0' and <= '9' => digit - '0',
+                >= 'a' and <= 'f' => digit - 'a' + 10,
+                >= 'A' and <= 'F' => digit - 'A' + 10,
+                _ => -1,
+            };
+
+            if (parsed < 0)
+            {
+                return false;
+            }
+
+            value = (value << 4) | (uint)parsed;
+        }
+
+        return true;
     }
 }

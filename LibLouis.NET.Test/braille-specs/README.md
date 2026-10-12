@@ -3,7 +3,7 @@
 Copied verbatim from `upstream/liblouis-<version>/tests/braille-specs/`. Re-copy when the upstream
 version is bumped; the diff is the set of expectations that changed.
 
-126 specs are here, from liblouis 3.39.0, covering roughly 70 languages. Upstream ships 160.
+127 specs are here, from liblouis 3.39.0, covering roughly 70 languages. Upstream ships 160.
 
 The selection below was made against 3.33.0. Specs upstream has added since have not been tried yet:
 `en-g3-dictionary.yaml`, `en-g3.yaml`, `en-gb-comp8.yaml`, `et_harness.yaml`, `it.yaml`,
@@ -17,26 +17,11 @@ The selection below was made against 3.33.0. Specs upstream has added since have
 200,000+ cases each, around 800,000 in total. They would dominate every run for little extra signal.
 Add them behind a switch if wanted.
 
-### 13 specs that do not yet pass
+### 12 specs that do not yet pass
 
 Not excluded because they are wrong — excluded because nobody has worked out yet whether the
 disagreement is this harness or the wrapper, and a red suite that is expected to be red is worse
-than a smaller green one. They divide into three groups.
-
-**1 fails on a construct this harness reads differently from upstream.** It resolves its tables
-correctly and disagrees on a handful of cases; the harness is the one that is wrong.
-
-```
-es-g0-g1.yaml  8/992
-```
-
-`es-g0-g1.yaml` uses `'\n'`, `'\r'` and `'\s'`. `BrailleSpec.Unescape` handles only `\xNNNN`,
-`\yNNNN`, `\uNNNN`, `\\` and `\"`, so those three reach liblouis as a literal backslash plus a
-letter and translate to two cells. liblouis's own parser (`parseCharsInternal` in
-compileTranslationTable.c, reached from `lou_checkyaml` via `_lou_extParseChars`) also takes
-`\e \f \n \r \s \t \v \w` and the 8-digit `\ZNNNNNNNN`. Worth fixing with care: `\s` in particular
-is used across the specs, so completing the list changes the input of cases that pass today —
-`spaces.yaml`, in the next group, is the obvious one to re-check afterwards.
+than a smaller green one. They divide into two groups.
 
 **10 disagree on translation output**, a fraction of their cases each. These are the interesting
 ones: either a per-case option this harness does not model, or a real difference between the wrapper
@@ -87,6 +72,28 @@ Only `en-us-g2.yaml` was affected. `vi.yaml` is the one other spec here with a b
 now default to anyway. No `{testmode: hyphenate}` or `{testmode: display}` block is followed by a
 bare `tests:`, so no entry that used to be skipped started running: the recorded tally moved only by
 the one `inputPos` entry `en-us-g2.yaml` brought with it.
+
+### What used to be here: es-g0-g1.yaml and the escape set
+
+`BrailleSpec.Unescape` took `\xNNNN`, `\\` and `\"` and left every other escape as a literal
+backslash plus a letter, so `es-g0-g1.yaml`'s `'\t'`, `'\n'`, `'\r'` and `'\s'` translated to two
+cells where one was expected. It now mirrors `parseCharsInternal`
+(liblouis/compileTranslationTable.c:1263), which lou_checkyaml reaches through
+`_lou_extParseChars` for the input and the expected value of every case: `\e \f \n \r \s \t \v \w`,
+`\"` as QUOTESUB, `\\`, and the hex forms `\x` (4 digits), `\y` (5) and `\z` (8), the last two
+needing the UCS-4 build that `build_runtime_packages.sh` configures.
+
+Completing the set changed no case that already passed, which is worth knowing because it looks as
+though it should have. `\s` appears about two thousand times across these specs, but almost always as
+`\\s` inside a single quoted scalar — `' ... \\said ...'` in `en-ueb-computer-code.yaml` — where the
+`\\` is consumed as a pair and the `s` is an ordinary letter. The only bare `\s` outside
+`es-g0-g1.yaml` is a `display \s 0` rule in the inline tables of `bg.yaml` and `nl-g0_harness.yaml`,
+and inline table content is passed to liblouis as written rather than through `Unescape`.
+
+`\u` and `\"` are the mirror image: `\u` is not a liblouis escape at all, and both appear only in
+double quoted scalars, where YamlDotNet decodes them before the reader sees them, exactly as libyaml
+does for upstream. Neither has ever reached `Unescape`, so dropping `\u` and giving `\"` its
+upstream meaning changed nothing either.
 
 ## Restoring one
 
