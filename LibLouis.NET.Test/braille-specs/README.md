@@ -3,7 +3,7 @@
 Copied verbatim from `upstream/liblouis-<version>/tests/braille-specs/`. Re-copy when the upstream
 version is bumped; the diff is the set of expectations that changed.
 
-127 specs are here, from liblouis 3.39.0, covering roughly 70 languages. Upstream ships 160.
+128 specs are here, from liblouis 3.39.0, covering roughly 70 languages. Upstream ships 160.
 
 The selection below was made against 3.33.0. Specs upstream has added since have not been tried yet:
 `en-g3-dictionary.yaml`, `en-g3.yaml`, `en-gb-comp8.yaml`, `et_harness.yaml`, `it.yaml`,
@@ -17,13 +17,13 @@ The selection below was made against 3.33.0. Specs upstream has added since have
 200,000+ cases each, around 800,000 in total. They would dominate every run for little extra signal.
 Add them behind a switch if wanted.
 
-### 12 specs that do not yet pass
+### 11 specs that do not yet pass
 
 Not excluded because they are wrong — excluded because nobody has worked out yet whether the
 disagreement is this harness or the wrapper, and a red suite that is expected to be red is worse
 than a smaller green one. They divide into two groups.
 
-**10 disagree on translation output**, a fraction of their cases each. These are the interesting
+**9 disagree on translation output**, a fraction of their cases each. These are the interesting
 ones: either a per-case option this harness does not model, or a real difference between the wrapper
 and upstream.
 
@@ -35,10 +35,13 @@ grc-international-composed.yaml  30/432
 no.yaml  167/868
 pt.yaml  21/806
 ru.yaml  39/140
-spaces.yaml  11/1849
 uk.yaml  3/45
 zh-tw.yaml  2/20
 ```
+
+These counts were measured against 3.33.0 and have not all been re-measured since. `spaces.yaml`
+was in this group at 11/1849 and passes now, so the rest are worth re-checking before anyone spends
+time diagnosing them.
 
 **2 do not parse.** One has a multi-line double-quoted scalar YamlDotNet rejects. The other is
 `en-ueb.yaml`, which ran here until 3.38.0: since that release it continues a flow sequence on an
@@ -94,6 +97,18 @@ and inline table content is passed to liblouis as written rather than through `U
 double quoted scalars, where YamlDotNet decodes them before the reader sees them, exactly as libyaml
 does for upstream. Neither has ever reached `Unescape`, so dropping `\u` and giving `\"` its
 upstream meaning changed nothing either.
+
+### What used to be here: spaces.yaml, which neither fix touched
+
+Listed at 11/1849 among the translation disagreements, and re-checked because completing the escape
+set looked likely to change its input. It did not — `spaces.yaml` uses `\x` and nothing else — and
+neither did the flags change, since every one of its `tests:` blocks carries its own `flags:`. It
+passes with the reader exactly as it was before either fix, which was confirmed by running it
+against the previous commit, so the 11 failures were already gone: the table-resolution fix is the
+only plausible cause, and 1849 was a 3.33.0-era count against a 1842-case file.
+
+The lesson is about the figures above rather than about the spec: they were measured against an
+older liblouis and an older harness, and at least one of them was stale.
 
 ## Restoring one
 
