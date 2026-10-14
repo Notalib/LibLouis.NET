@@ -5,8 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-using YamlDotNet.Core;
-using YamlDotNet.Core.Events;
+using SharpYaml;
+using SharpYaml.Events;
 
 namespace LibLouis.NET.Test;
 
@@ -73,7 +73,7 @@ public enum TestMode
 /// <c>table</c>, <c>flags</c> and <c>tests</c> at the same level, which duplicate key handling
 /// would collapse or reject. lou_checkyaml treats the file as an event stream where each key
 /// mutates parser state, and <c>tests</c> executes against whatever is current
-/// (tools/lou_checkyaml.c:1087-1139), so this reader does the same over YamlDotNet's IParser.
+/// (tools/lou_checkyaml.c:1087-1139), so this reader does the same over SharpYaml's IParser.
 ///
 /// Consecutive <c>table</c> keys accumulate rather than replace: the following <c>tests</c> block
 /// runs once per accumulated table. A <c>flags</c> block, by contrast, applies to the single
@@ -97,7 +97,7 @@ public static class BrailleSpecReader
         var skipped = new SortedDictionary<string, int>(StringComparer.Ordinal);
 
         using var reader = new StreamReader(path);
-        var parser = new Parser(reader);
+        var parser = Parser.CreateParser(reader);
 
         parser.Consume<StreamStart>();
         parser.Consume<DocumentStart>();

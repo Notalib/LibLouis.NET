@@ -3,10 +3,11 @@
 Copied verbatim from `upstream/liblouis-<version>/tests/braille-specs/`. Re-copy when the upstream
 version is bumped; the diff is the set of expectations that changed.
 
-139 specs are here, from liblouis 3.39.0, covering roughly 75 languages. Upstream ships 160.
+142 specs are here, from liblouis 3.39.0, covering roughly 75 languages. Upstream ships 160.
 
-Everything upstream has added since the original 3.33.0 selection has now been tried. Eleven of the
-thirteen passed as-is and are here. The two that are not are covered below.
+Everything upstream has added since the original 3.33.0 selection has now been tried, and every
+spec upstream ships now parses here. What is left out is left out on purpose or because the
+translation disagrees, never because the file could not be read.
 
 ## What is not here, and why
 
@@ -18,15 +19,15 @@ Add them behind a switch if wanted.
 `en-g3-dictionary.yaml` is counted here rather than among the untried. It carries no `_harness` in
 its name, but at 1.4MB and 40,000 lines it is one of these in everything but spelling.
 
-### 12 specs that do not yet pass
+### 9 specs that do not yet pass
 
 Not excluded because they are wrong — excluded because nobody has worked out yet whether the
 disagreement is this harness or the wrapper, and a red suite that is expected to be red is worse
-than a smaller green one. They divide into two groups.
+than a smaller green one.
 
-**9 disagree on translation output**, a fraction of their cases each. These are the interesting
-ones: either a per-case option this harness does not model, or a real difference between the wrapper
-and upstream.
+All nine **disagree on translation output**, a fraction of their cases each. These are the
+interesting ones: either a per-case option this harness does not model, or a real difference between
+the wrapper and upstream.
 
 ```
 bel.yaml  1/45
@@ -44,17 +45,24 @@ These counts were measured against 3.33.0 and have not all been re-measured sinc
 was in this group at 11/1849 and passes now, so the rest are worth re-checking before anyone spends
 time diagnosing them.
 
-**3 do not parse**, every one of them YamlDotNet 18.1.0 refusing something libyaml accepts, so none
-is a wrapper fault and none is fixable here without pre-processing a file that is meant to be
-verbatim.
+### What used to be here: three specs the YAML parser could not read
 
-- One has a multi-line double-quoted scalar YamlDotNet rejects.
-- `en-ueb.yaml` ran here until 3.38.0: since that release it continues a flow sequence on an
-  unindented line (`- [` then `disingenuous, ...]`).
-- `it.yaml` line 83 is `- [-, ⠤]`. A bare `-` is a valid plain scalar in a flow sequence — it is
-  only an indicator when followed by a space — and libyaml reads it as `["-", "⠤"]`, but YamlDotNet
-  throws `SemanticErrorException: Invalid key indicator format`. Worth reporting upstream to
-  YamlDotNet; it is the third spec lost to that parser rather than to anything here.
+`de-g2-sbs.yaml`, `en-ueb.yaml` and `it.yaml` were excluded for years of releases because
+YamlDotNet refused them, each for a different reason and none of them a fault in the file:
+
+- `de-g2-sbs.yaml` — a multi-line double-quoted scalar, rejected over indentation.
+- `en-ueb.yaml` — ran here until 3.38.0, when it began continuing a flow sequence on an unindented
+  line (`- [` then `disingenuous, ...]`).
+- `it.yaml` — line 83 is `- [-, ⠤]`. A bare `-` is a valid plain scalar in a flow sequence, since it
+  is only an indicator when followed by a space.
+
+libyaml, which is what upstream's `lou_checkyaml` parses these with, accepts all three. Switching
+the reader to SharpYaml took them. See `ParserExtensions.cs` for the two helpers that move did need.
+
+The general lesson is worth keeping: a spec that fails to *parse* is a fact about the parser, not
+about the wrapper or the file, and the reference implementation for these files is libyaml. Measure
+a candidate parser against all 160 before believing it is better — VYaml 1.4.0 reads `it.yaml` and
+`de-g2-sbs.yaml` but chokes on `en-g3.yaml`, which the other two manage.
 
 ### What used to be here: the 27 table-resolution failures
 
