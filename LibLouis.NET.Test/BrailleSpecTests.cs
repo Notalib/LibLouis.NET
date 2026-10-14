@@ -103,7 +103,7 @@ public class BrailleSpecTests(ITestOutputHelper output)
             ["test option: inputPos"] = 1,
             ["test option: mode"] = 19,
             ["test option: outputPos"] = 5067,
-            ["test option: typeform"] = 339,
+            ["test option: typeform"] = 344,
             ["testmode: display"] = 5,
             ["testmode: hyphenate"] = 1198,
         };

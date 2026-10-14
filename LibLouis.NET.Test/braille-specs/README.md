@@ -3,21 +3,22 @@
 Copied verbatim from `upstream/liblouis-<version>/tests/braille-specs/`. Re-copy when the upstream
 version is bumped; the diff is the set of expectations that changed.
 
-128 specs are here, from liblouis 3.39.0, covering roughly 70 languages. Upstream ships 160.
+139 specs are here, from liblouis 3.39.0, covering roughly 75 languages. Upstream ships 160.
 
-The selection below was made against 3.33.0. Specs upstream has added since have not been tried yet:
-`en-g3-dictionary.yaml`, `en-g3.yaml`, `en-gb-comp8.yaml`, `et_harness.yaml`, `it.yaml`,
-`ja-rokutenkanji.yaml`, `lt.yaml`, `mk.yaml`, `ovd.yaml` and `smi.yaml` (3.38.0), and `en-nz.yaml`,
-`ht.yaml` and `mi.yaml` (3.39.0).
+Everything upstream has added since the original 3.33.0 selection has now been tried. Eleven of the
+thirteen passed as-is and are here. The two that are not are covered below.
 
 ## What is not here, and why
 
-### The eight dictionary harnesses
+### The nine dictionary harnesses
 
 200,000+ cases each, around 800,000 in total. They would dominate every run for little extra signal.
 Add them behind a switch if wanted.
 
-### 11 specs that do not yet pass
+`en-g3-dictionary.yaml` is counted here rather than among the untried. It carries no `_harness` in
+its name, but at 1.4MB and 40,000 lines it is one of these in everything but spelling.
+
+### 12 specs that do not yet pass
 
 Not excluded because they are wrong — excluded because nobody has worked out yet whether the
 disagreement is this harness or the wrapper, and a red suite that is expected to be red is worse
@@ -43,10 +44,17 @@ These counts were measured against 3.33.0 and have not all been re-measured sinc
 was in this group at 11/1849 and passes now, so the rest are worth re-checking before anyone spends
 time diagnosing them.
 
-**2 do not parse.** One has a multi-line double-quoted scalar YamlDotNet rejects. The other is
-`en-ueb.yaml`, which ran here until 3.38.0: since that release it continues a flow sequence on an
-unindented line (`- [` then `disingenuous, ...]`), which libyaml accepts and YamlDotNet 18.1.0
-throws on.
+**3 do not parse**, every one of them YamlDotNet 18.1.0 refusing something libyaml accepts, so none
+is a wrapper fault and none is fixable here without pre-processing a file that is meant to be
+verbatim.
+
+- One has a multi-line double-quoted scalar YamlDotNet rejects.
+- `en-ueb.yaml` ran here until 3.38.0: since that release it continues a flow sequence on an
+  unindented line (`- [` then `disingenuous, ...]`).
+- `it.yaml` line 83 is `- [-, ⠤]`. A bare `-` is a valid plain scalar in a flow sequence — it is
+  only an indicator when followed by a space — and libyaml reads it as `["-", "⠤"]`, but YamlDotNet
+  throws `SemanticErrorException: Invalid key indicator format`. Worth reporting upstream to
+  YamlDotNet; it is the third spec lost to that parser rather than to anything here.
 
 ### What used to be here: the 27 table-resolution failures
 
