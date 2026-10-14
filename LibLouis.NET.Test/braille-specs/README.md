@@ -3,7 +3,8 @@
 Copied verbatim from `upstream/liblouis-<version>/tests/braille-specs/`. Re-copy when the upstream
 version is bumped; the diff is the set of expectations that changed.
 
-142 specs are here, from liblouis 3.39.0, covering roughly 75 languages. Upstream ships 160.
+150 specs are here, from liblouis 3.39.0, covering roughly 80 languages, and they check 229,424
+cases. Upstream ships 160.
 
 Everything upstream has added since the original 3.33.0 selection has now been tried, and every
 spec upstream ships now parses here. What is left out is left out on purpose or because the
@@ -19,31 +20,34 @@ Add them behind a switch if wanted.
 `en-g3-dictionary.yaml` is counted here rather than among the untried. It carries no `_harness` in
 its name, but at 1.4MB and 40,000 lines it is one of these in everything but spelling.
 
-### 9 specs that do not yet pass
+### no.yaml, the one spec that disagrees
 
-Not excluded because they are wrong — excluded because nobody has worked out yet whether the
-disagreement is this harness or the wrapper, and a red suite that is expected to be red is worse
-than a smaller green one.
+299 of its 2,191 cases do not match, and one case upstream marks `xfail` passes here unexpectedly.
+It is the last spec excluded for a reason nobody has got to the bottom of: either a per-case option
+this harness does not model, or a real difference between the wrapper and upstream.
 
-All nine **disagree on translation output**, a fraction of their cases each. These are the
-interesting ones: either a per-case option this harness does not model, or a real difference between
-the wrapper and upstream.
+It is worth saying plainly that this is now the *only* evidence of a possible wrapper bug anywhere
+in the suite, so it deserves the attention the other eight no longer need.
 
-```
-bel.yaml  1/45
-de-g0-detailed-specs.yaml  35/476
-de-g1-detailed-specs.yaml  35/476
-grc-international-composed.yaml  30/432
-no.yaml  167/868
-pt.yaml  21/806
-ru.yaml  39/140
-uk.yaml  3/45
-zh-tw.yaml  2/20
-```
+A cheap way to find out which: [louis-rs](https://github.com/liblouis/louis-rs), upstream's Rust
+re-implementation, runs these same specs and reports 98.6% of the suite passing. `louis check
+--summary` gives a per-file table. If `no.yaml` fails there too, the fault is likelier to lie in the
+spec or the Norwegian tables than in this wrapper.
 
-These counts were measured against 3.33.0 and have not all been re-measured since. `spaces.yaml`
-was in this group at 11/1849 and passes now, so the rest are worth re-checking before anyone spends
-time diagnosing them.
+### What used to be here: eight specs that disagreed on translation output
+
+`bel.yaml`, `de-g0-detailed-specs.yaml`, `de-g1-detailed-specs.yaml`,
+`grc-international-composed.yaml`, `pt.yaml`, `ru.yaml`, `uk.yaml` and `zh-tw.yaml` were listed here
+with per-case failure counts measured against 3.33.0. All eight pass now, and they run 3,625 cases
+between them with 5 entries skipped, so they are not passing by being skipped.
+
+Nothing was done to any of them. The table-resolution fix is the plausible cause — several resolved
+to a table from the wrong language entirely, so they were being compared against the wrong
+expectations.
+
+The lesson is the one `spaces.yaml` already taught and nobody acted on: **a recorded failure count
+is a measurement, not a property.** These sat in this file for several releases describing a
+situation that had stopped being true. Re-measure before diagnosing.
 
 ### What used to be here: three specs the YAML parser could not read
 
