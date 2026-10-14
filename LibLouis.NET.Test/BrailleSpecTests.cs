@@ -103,7 +103,7 @@ public class BrailleSpecTests(ITestOutputHelper output)
             ["test option: inputPos"] = 1,
             ["test option: mode"] = 19,
             ["test option: outputPos"] = 5070,
-            ["test option: typeform"] = 543,
+            ["test option: typeform"] = 624,
             ["testmode: display"] = 5,
             ["testmode: hyphenate"] = 1198,
         };
@@ -176,8 +176,17 @@ public class BrailleSpecTests(ITestOutputHelper output)
 
     private static string? Run(BrailleSpecCase testCase, string table)
     {
-        string[] tables = [ResolveDisplayTable(testCase.DisplayTable), table];
+        string display = ResolveDisplayTable(testCase.DisplayTable);
         int outputLength = Math.Max(testCase.Input.Length, testCase.Expected.Length) * 4;
+
+        if (NamesTranslationTable(testCase.DisplayTable))
+        {
+            return RunWithSeparateDisplayTable(testCase, table, display, outputLength);
+        }
+
+        // Everywhere else the display table goes in front of the translation table in one list,
+        // which is the same translation upstream gets, and keeps the wrapper itself under test.
+        string[] tables = [display, table];
 
         try
         {
@@ -193,6 +202,54 @@ public class BrailleSpecTests(ITestOutputHelper output)
             // nothing came back.
             return $"<translation failed: {ex.Message}>";
         }
+    }
+
+    /// <summary>
+    /// Whether a display table list names a translation table, as in no.yaml's
+    /// <c>unicode-without-blank.dis,no-no-g0.utb</c>, which borrows the display rules a translation
+    /// table still carries.
+    /// </summary>
+    /// <remarks>
+    /// lou_checkyaml compiles the display table apart from the translation table. The public API
+    /// cannot: lou_translate compiles one list as both, so putting such a display list in front of
+    /// the translation table adds the named table's translation rules too. In no.yaml that put the
+    /// grade 0 table's number sign in front of the 8-dot table's digits, 299 cases in all.
+    /// Inline display tables are left on the wrapper, since the specs only include character
+    /// definitions in them.
+    /// </remarks>
+    private static bool NamesTranslationTable(string display) =>
+        !display.Contains('\n', StringComparison.Ordinal) &&
+        display.Split(',').Any(name => !name.Trim().EndsWith(".dis", StringComparison.OrdinalIgnoreCase));
+
+    private static string RunWithSeparateDisplayTable(
+        BrailleSpecCase testCase, string table, string display, int outputLength)
+    {
+        uint[] input = testCase.Input.EnumerateRunes().Select(r => (uint)r.Value).ToArray();
+        uint[] output = new uint[outputLength];
+        int inputLength = input.Length;
+        int outputCount = output.Length;
+        byte[] tableList = SafeNativeMethods.Utf8(table);
+        byte[] displayTableList = SafeNativeMethods.Utf8(display);
+
+        int succeeded = testCase.Direction == TestDirection.Forward
+            ? SafeNativeMethods._lou_translate(
+                tableList, displayTableList, input, ref inputLength, output, ref outputCount, 0, 0, 0, 0, 0, 0, 0, 0)
+            : SafeNativeMethods._lou_backTranslate(
+                tableList, displayTableList, input, ref inputLength, output, ref outputCount, 0, 0, 0, 0, 0, 0, 0, 0);
+
+        if (succeeded == 0)
+        {
+            return "<translation failed>";
+        }
+
+        var result = new StringBuilder();
+
+        foreach (uint c in output.AsSpan(0, outputCount))
+        {
+            result.Append(new Rune(c).ToString());
+        }
+
+        return result.ToString();
     }
 
     // Every query from every spec is resolved once, up front, and shared by every spec's test, so

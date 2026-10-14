@@ -32,6 +32,56 @@ internal static class SafeNativeMethods
         int mode);
 
     /// <summary>
+    /// lou_translate with the display table compiled apart from the translation table, which is
+    /// how lou_checkyaml runs the braille specs (tools/brl_checks.c). The public API compiles one
+    /// table list for both, so a display list that names a translation table leaks that table's
+    /// rules into the translation. Internal, but exported on every platform this repository builds.
+    /// </summary>
+    /// <remarks>
+    /// The buffers are uint[] because widechar is 4 bytes in the --enable-ucs4 build the runtime
+    /// packages ship. Positions, cursor, typeform, spacing and the rule trace are not needed by
+    /// the specs this is used for, and are passed as null.
+    /// </remarks>
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [DllImport("liblouis", EntryPoint = "_lou_translate")]
+    internal static extern int _lou_translate(
+        byte[] tableList,
+        byte[] displayTableList,
+        uint[] inbuf,
+        ref int inlen,
+        uint[] outbuf,
+        ref int outlen,
+        nint typeform,
+        nint spacing,
+        nint outputPos,
+        nint inputPos,
+        nint cursorPos,
+        int mode,
+        nint rules,
+        nint rulesLen);
+
+    /// <summary>
+    /// The back translation counterpart of <see cref="_lou_translate"/>.
+    /// </summary>
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [DllImport("liblouis", EntryPoint = "_lou_backTranslate")]
+    internal static extern int _lou_backTranslate(
+        byte[] tableList,
+        byte[] displayTableList,
+        uint[] inbuf,
+        ref int inlen,
+        uint[] outbuf,
+        ref int outlen,
+        nint typeform,
+        nint spacing,
+        nint outputPos,
+        nint inputPos,
+        nint cursorPos,
+        int mode,
+        nint rules,
+        nint rulesLen);
+
+    /// <summary>
     /// Encodes a string the way liblouis expects a <c>const char *</c>.
     /// </summary>
     internal static byte[] Utf8(string value)

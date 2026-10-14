@@ -3,36 +3,41 @@
 Copied verbatim from `upstream/liblouis-<version>/tests/braille-specs/`. Re-copy when the upstream
 version is bumped; the diff is the set of expectations that changed.
 
-150 specs are here, from liblouis 3.39.0, covering roughly 80 languages, and they check 229,424
+152 specs are here, from liblouis 3.39.0, covering roughly 80 languages, and they check 283,439
 cases. Upstream ships 160.
 
-Everything upstream has added since the original 3.33.0 selection has now been tried, and every
-spec upstream ships now parses here. What is left out is left out on purpose or because the
-translation disagrees, never because the file could not be read.
+Every spec upstream ships parses here, and every one of them passes. The eight that are left out
+are left out for their size alone.
 
 ## What is not here, and why
 
-### The nine dictionary harnesses
+### The eight dictionary harnesses
 
-200,000+ cases each, around 800,000 in total. They would dominate every run for little extra signal.
-Add them behind a switch if wanted.
+The four `da-dk-*-dictionary_harness*` specs, `en-ueb-g2-dictionary_harness.yaml`,
+`en-us-g2-dictionary_harness.yaml`, `en-g3-dictionary.yaml` and
+`hu-hu-g1_dictionary_special_consonants.yaml`: 60MB between them, taking the suite from about 20
+seconds to about two and a half minutes per target framework. All eight passed against 3.39.0 when
+copied in, so leaving them out costs coverage of the tables' word lists rather than hiding a known
+failure. Add them behind a switch if wanted.
 
-`en-g3-dictionary.yaml` is counted here rather than among the untried. It carries no `_harness` in
-its name, but at 1.4MB and 40,000 lines it is one of these in everything but spelling.
+### What used to be here: no.yaml and the display table
 
-### no.yaml, the one spec that disagrees
+It was the one spec still excluded for disagreeing, at 299 of 2,191 cases, and the cause was this
+harness rather than the wrapper. Its display table is `unicode-without-blank.dis,no-no-g0.utb`,
+borrowing display rules the grade 0 translation table still carries. lou_checkyaml compiles the
+display table apart from the translation table (`_lou_translate` in tools/brl_checks.c). The public
+API cannot: `lou_translate` compiles one table list as both, so this harness's habit of putting the
+display table in front of the translation table added the grade 0 table's translation rules to
+every table in the file. Its 8-dot section came out with a 6-dot number sign in front of every
+digit.
 
-299 of its 2,191 cases do not match, and one case upstream marks `xfail` passes here unexpectedly.
-It is the last spec excluded for a reason nobody has got to the bottom of: either a per-case option
-this harness does not model, or a real difference between the wrapper and upstream.
+A spec whose display list names anything but a `.dis` file now goes through `_lou_translate` and
+`_lou_backTranslate` directly (`BrailleSpecTests.NamesTranslationTable`): `no`, `zh-tw`,
+`ms-my-g2` and the two `fr-bfu` specs. They are internal, but exported on every platform the
+runtime packages are built for. Every other spec stays on the wrapper, so the specs keep testing it
+end to end rather than only liblouis.
 
-It is worth saying plainly that this is now the *only* evidence of a possible wrapper bug anywhere
-in the suite, so it deserves the attention the other eight no longer need.
-
-A cheap way to find out which: [louis-rs](https://github.com/liblouis/louis-rs), upstream's Rust
-re-implementation, runs these same specs and reports 98.6% of the suite passing. `louis check
---summary` gives a per-file table. If `no.yaml` fails there too, the fault is likelier to lie in the
-spec or the Norwegian tables than in this wrapper.
+`afr-za-g2.yaml` was never copied in, nor counted among the specs left out. It passed when it was.
 
 ### What used to be here: eight specs that disagreed on translation output
 
