@@ -102,8 +102,8 @@ public class BrailleSpecTests(ITestOutputHelper output)
             ["test option: expected_typeform"] = 17,
             ["test option: inputPos"] = 1,
             ["test option: mode"] = 19,
-            ["test option: outputPos"] = 5067,
-            ["test option: typeform"] = 541,
+            ["test option: outputPos"] = 5070,
+            ["test option: typeform"] = 543,
             ["testmode: display"] = 5,
             ["testmode: hyphenate"] = 1198,
         };
